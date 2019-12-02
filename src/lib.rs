@@ -213,7 +213,7 @@ pub use deser::DeSerializer;
 /// The general error used by the Rustbreak Module
 pub use error::RustbreakError;
 
-use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard, Arc};
 use std::fmt::Debug;
 
 use serde::Serialize;
@@ -238,12 +238,12 @@ use backend::MmapStorage;
 /// If the backend or the de/serialization panics, the database is poisoned. This means that any
 /// subsequent writes/reads will fail with an `error::RustbreakErrorKind::PoisonError`.
 /// You can only recover from this by re-creating the Database Object.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Database<Data, Back, DeSer>
 {
-    data: RwLock<Data>,
-    backend: Mutex<Back>,
-    deser: DeSer
+    data: Arc<RwLock<Data>>,
+    backend: Arc<Mutex<Back>>,
+    deser: Arc<DeSer>
 }
 
 impl<Data, Back, DeSer> Database<Data, Back, DeSer>
@@ -569,70 +569,10 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
     /// Create a database from its constituents
     pub fn from_parts(data: Data, backend: Back, deser: DeSer) -> Database<Data, Back, DeSer> {
         Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: deser,
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser: Arc::new(deser),
         }
-    }
-
-    /// Break a database into its individual parts
-    pub fn into_inner(self) -> error::Result<(Data, Back, DeSer)> {
-        Ok((self.data.into_inner().map_err(|_| error::RustbreakErrorKind::Poison)?,
-            self.backend.into_inner().map_err(|_| error::RustbreakErrorKind::Poison)?,
-            self.deser))
-    }
-
-    /// Tries to clone the Data in the Database.
-    ///
-    /// This method returns a `MemoryDatabase` which has an empty vector as a
-    /// backend initially. This means that the user is responsible for assigning a new backend
-    /// if an alternative is wanted.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # #[macro_use] extern crate serde_derive;
-    /// # extern crate rustbreak;
-    /// # extern crate serde;
-    /// # extern crate tempfile;
-    /// # extern crate failure;
-    /// use rustbreak::{FileDatabase, deser::Ron};
-    ///
-    /// #[derive(Debug, Serialize, Deserialize, Clone)]
-    /// struct Data {
-    ///     level: u32,
-    /// }
-    ///
-    /// # fn main() {
-    /// # let func = || -> Result<(), failure::Error> {
-    /// # let file = tempfile::tempfile()?;
-    /// let db = FileDatabase::<Data, Ron>::from_file(file, Data { level: 0 })?;
-    ///
-    /// db.write(|db| {
-    ///     db.level = 42;
-    /// })?;
-    ///
-    /// db.save()?;
-    ///
-    /// let other_db = db.try_clone()?;
-    ///
-    /// // You can also return from a `.read()`. But don't forget that you cannot return references
-    /// // into the structure
-    /// let value = other_db.read(|db| db.level)?;
-    /// assert_eq!(42, value);
-    /// # return Ok(());
-    /// # };
-    /// # func().unwrap();
-    /// # }
-    /// ```
-    pub fn try_clone(&self) -> error::Result<MemoryDatabase<Data, DeSer>> {
-        let lock = self.data.write().map_err(|_| error::RustbreakErrorKind::Poison)?;
-
-        Ok(Database {
-            data: RwLock::new(lock.clone()),
-            backend: Mutex::new(MemoryBackend::new()),
-            deser: self.deser.clone(),
-        })
     }
 }
 
@@ -652,9 +592,9 @@ impl<Data, DeSer> Database<Data, FileBackend, DeSer>
         let backend = FileBackend::open(path).context(error::RustbreakErrorKind::Backend)?;
 
         Ok(Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: DeSer::default(),
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser:Arc::new( DeSer::default()),
         })
     }
 
@@ -664,9 +604,9 @@ impl<Data, DeSer> Database<Data, FileBackend, DeSer>
         let backend = FileBackend::from_file(file);
 
         Ok(Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: DeSer::default(),
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser: Arc::new(DeSer::default()),
         })
     }
 }
@@ -684,9 +624,9 @@ impl<Data, DeSer> Database<Data, MemoryBackend, DeSer>
         let backend = MemoryBackend::new();
 
         Ok(Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: DeSer::default(),
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser: Arc::new(DeSer::default()),
         })
     }
 }
@@ -706,9 +646,9 @@ impl<Data, DeSer> Database<Data, MmapStorage, DeSer>
         let backend = MmapStorage::new()?;
 
         Ok(Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: DeSer::default(),
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser: Arc::new(DeSer::default()),
         })
     }
 
@@ -717,9 +657,9 @@ impl<Data, DeSer> Database<Data, MmapStorage, DeSer>
         let backend = MmapStorage::with_size(size)?;
 
         Ok(Database {
-            data: RwLock::new(data),
-            backend: Mutex::new(backend),
-            deser: DeSer::default(),
+            data: Arc::new(RwLock::new(data)),
+            backend: Arc::new(Mutex::new(backend)),
+            deser: Arc::new(DeSer::default()),
         })
     }
 }
@@ -731,7 +671,7 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer> {
         Database {
             backend: self.backend,
             data: self.data,
-            deser: deser,
+            deser: Arc::new(deser),
         }
     }
 }
@@ -744,12 +684,15 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer> {
     pub fn with_backend<T>(self, backend: T) -> Database<Data, T, DeSer>
     {
         Database {
-            backend: Mutex::new(backend),
+            backend: Arc::new(Mutex::new(backend)),
             data: self.data,
             deser: self.deser,
         }
     }
 }
+/*
+
+// FIXME this cannot be done safely with clonable database
 
 impl<Data, Back, DeSer> Database<Data, Back, DeSer>
     where
@@ -767,11 +710,11 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
             C: FnOnce(Data) -> OutputData,
             DeSer: DeSerializer<OutputData> + Debug + Send + Sync,
     {
-        let (data, backend, deser) = self.into_inner()?;
         Ok(Database {
-            data: RwLock::new(convert(data)),
-            backend: Mutex::new(backend),
-            deser: deser,
+            data: Arc::new(RwLock::new(convert(self.data.))),
+            backend: self.backend,
+            deser: self.deser,
         })
     }
 }
+*/
