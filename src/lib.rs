@@ -239,7 +239,7 @@ use backend::MmapStorage;
 /// subsequent writes/reads will fail with an `error::RustbreakErrorKind::PoisonError`.
 /// You can only recover from this by re-creating the Database Object.
 #[derive(Debug, Clone)]
-pub struct Database<Data, Back, DeSer>
+pub struct Database<Data: ?Sized, Back: ?Sized, DeSer: ?Sized>
 {
     data: Arc<RwLock<Data>>,
     backend: Arc<Mutex<Back>>,
