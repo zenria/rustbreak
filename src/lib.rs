@@ -238,12 +238,22 @@ use backend::MmapStorage;
 /// If the backend or the de/serialization panics, the database is poisoned. This means that any
 /// subsequent writes/reads will fail with an `error::RustbreakErrorKind::PoisonError`.
 /// You can only recover from this by re-creating the Database Object.
-#[derive(Debug, Clone)]
-pub struct Database<Data: ?Sized, Back: ?Sized, DeSer: ?Sized>
+#[derive(Debug)]
+pub struct Database<Data, Back, DeSer>
 {
     data: Arc<RwLock<Data>>,
     backend: Arc<Mutex<Back>>,
     deser: Arc<DeSer>
+}
+
+impl<Data, Back, DeSer> Clone for Database<Data, Back, DeSer> {
+    fn clone(&self) -> Self {
+        Database {
+            data: self.data.clone(),
+            backend: self.backend.clone(),
+            deser: self.deser.clone()
+        }
+    }
 }
 
 impl<Data, Back, DeSer> Database<Data, Back, DeSer>
