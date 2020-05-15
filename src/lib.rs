@@ -573,8 +573,8 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
 
     /// Break a database into its individual parts
     pub fn into_inner(self) -> error::Result<(Data, Back, DeSer)> {
-        Ok((self.data.into_inner().map_err(|_| error::RustbreakErrorKind::Poison)?,
-            self.backend.into_inner().map_err(|_| error::RustbreakErrorKind::Poison)?,
+        Ok((self.data.into_inner().map_err(|_| error::RustbreakError::Poison)?,
+            self.backend.into_inner().map_err(|_| error::RustbreakError::Poison)?,
             self.deser))
     }
 
@@ -591,7 +591,7 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
     /// # extern crate rustbreak;
     /// # extern crate serde;
     /// # extern crate tempfile;
-    /// # extern crate failure;
+    /// # extern crate anyhow;
     /// use rustbreak::{FileDatabase, deser::Ron};
     ///
     /// #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -600,7 +600,7 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
     /// }
     ///
     /// # fn main() {
-    /// # let func = || -> Result<(), failure::Error> {
+    /// # let func = || -> Result<(), anyhow::Error> {
     /// # let file = tempfile::tempfile()?;
     /// let db = FileDatabase::<Data, Ron>::from_file(file, Data { level: 0 })?;
     ///
@@ -622,7 +622,7 @@ impl<Data, Back, DeSer> Database<Data, Back, DeSer>
     /// # }
     /// ```
     pub fn try_clone(&self) -> error::Result<MemoryDatabase<Data, DeSer>> {
-        let lock = self.data.write().map_err(|_| error::RustbreakErrorKind::Poison)?;
+        let lock = self.data.write().map_err(|_| error::RustbreakError::Poison)?;
 
         Ok(Database {
             data: RwLock::new(lock.clone()),
