@@ -9,8 +9,6 @@
 //! Implementing your own Backend should be straightforward. Check the `Backend` documentation for
 //! details.
 
-use failure::ResultExt;
-
 use error;
 
 /// The Backend Trait
@@ -39,18 +37,18 @@ impl Backend for FileBackend {
         use ::std::io::{Seek, SeekFrom, Read};
 
         let mut buffer = vec![];
-        self.0.seek(SeekFrom::Start(0)).context(error::RustbreakErrorKind::Backend)?;
-        self.0.read_to_end(&mut buffer).context(error::RustbreakErrorKind::Backend)?;
+        self.0.seek(SeekFrom::Start(0))?;
+        self.0.read_to_end(&mut buffer)?;
         Ok(buffer)
     }
 
     fn put_data(&mut self, data: &[u8]) -> error::Result<()> {
         use ::std::io::{Seek, SeekFrom, Write};
 
-        self.0.seek(SeekFrom::Start(0)).context(error::RustbreakErrorKind::Backend)?;
-        self.0.set_len(0).context(error::RustbreakErrorKind::Backend)?;
-        self.0.write_all(data).context(error::RustbreakErrorKind::Backend)?;
-        self.0.sync_all().context(error::RustbreakErrorKind::Backend)?;
+        self.0.seek(SeekFrom::Start(0))?;
+        self.0.set_len(0)?;
+        self.0.write_all(data)?;
+        self.0.sync_all()?;
         Ok(())
     }
 }
@@ -61,7 +59,7 @@ impl FileBackend {
         use ::std::fs::OpenOptions;
 
         Ok(FileBackend(
-            OpenOptions::new().read(true).write(true).create(true).open(path).context(error::RustbreakErrorKind::Backend)?,
+            OpenOptions::new().read(true).write(true).create(true).open(path)?,
         ))
     }
 

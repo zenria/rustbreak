@@ -1,6 +1,4 @@
 use memmap;
-use failure;
-use failure::ResultExt;
 
 use super::Backend;
 
@@ -8,6 +6,8 @@ use error;
 
 use std::cmp;
 use std::io;
+
+use anyhow::anyhow;
 
 #[derive(Debug)]
 struct Mmap {
@@ -39,9 +39,9 @@ impl Mmap {
     }
 
     //Copies data to mmap and modifies data's end cursor.
-    fn write(&mut self, data: &[u8]) -> Result<(), failure::Error> {
+    fn write(&mut self, data: &[u8]) -> Result<(), anyhow::Error> {
         if data.len() > self.len {
-            return Err(failure::err_msg("Unexpected write beyond mmap's backend capacity. This is a rustbreak's bug"));
+            return Err(anyhow!("Unexpected write beyond mmap's backend capacity. This is a rustbreak's bug"));
         }
         self.end = data.len();
         self.as_mut_slice().copy_from_slice(data);
@@ -87,7 +87,7 @@ impl MmapStorage {
 
     ///Creates new storage with custom size.
     pub fn with_size(len: usize) -> error::Result<Self> {
-        let mmap = Mmap::new(len).context(error::RustbreakErrorKind::Backend)?;
+        let mmap = Mmap::new(len)?;
 
         Ok(Self {
             mmap
@@ -105,10 +105,10 @@ impl Backend for MmapStorage {
 
     fn put_data(&mut self, data: &[u8]) -> error::Result<()> {
         if self.mmap.len < data.len() {
-            self.mmap.resize_no_copy(data.len()).context(error::RustbreakErrorKind::Backend)?;
+            self.mmap.resize_no_copy(data.len())?;
         }
-        self.mmap.write(data).context(error::RustbreakErrorKind::Backend)?;
-        self.mmap.flush().context(error::RustbreakErrorKind::Backend)?;
+        self.mmap.write(data)?;
+        self.mmap.flush()?;
         Ok(())
     }
 }
