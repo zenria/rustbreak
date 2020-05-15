@@ -1,6 +1,5 @@
 extern crate rustbreak;
 #[macro_use] extern crate serde_derive;
-extern crate failure;
 
 use rustbreak::FileDatabase;
 use rustbreak::deser::Ron;
@@ -16,7 +15,7 @@ struct Person {
     country: Country,
 }
 
-fn do_main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     use std::collections::HashMap;
 
     let db = FileDatabase::<HashMap<String, Person>, Ron>::from_path("test.ron", HashMap::new())?;
@@ -47,11 +46,4 @@ fn do_main() -> Result<(), failure::Error> {
     })?;
 
     Ok(())
-}
-
-fn main() {
-    if let Err(e) = do_main() {
-        eprintln!("An error has occurred at: \n{}", e.backtrace());
-        ::std::process::exit(1);
-    }
 }
